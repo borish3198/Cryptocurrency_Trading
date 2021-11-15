@@ -1,11 +1,3 @@
-'''
-저자 강환국의 저서 '가상화폐 투자 마법 공식 : 쉽고 안전하게 고수익 내는 검증된 매매 규칙 13' 중 
-7번째 투자 전략인 '다자 가상화폐 + 변동성 돌파'를 구현한 프로그램
-가상 화폐 거래소 '빗썸'에서 제공하는 pybithumb API를 활용해 구현
-거래를 위해선 '빗썸'이 제공하는 API Key를 발급받아야 하며 세부 내용은 해당 사이트 참조 (https://wikidocs.net/21887)
-'''
-
-
 import pybithumb
 import datetime
 import time
@@ -31,7 +23,6 @@ def main():
     def get_target_price(ticker):
         df = pybithumb.get_ohlcv(ticker)
         yesterday = df.iloc[-2]
-
         k = 0.5
         today_open = yesterday["close"]
         yesterday_high = yesterday["high"]
@@ -53,6 +44,14 @@ def main():
         unit = bithumb.get_balance(ticker)[0]
         bithumb.sell_market_order(ticker, unit)
 
+    # 변동률 계산
+    def calc_rate(ticker):
+        df = pybithumb.get_ohlcv(ticker)
+        yesterday = df.iloc[-2]
+        yesterday_close = yesterday["close"]
+        yesterday_open = yesterday["open"]
+        change_rate = (yesterday_close-yesterday_open)/yesterday_open * 100
+        return change_rate
 
     #매일 자정 거래를 위한 시간값
     now = datetime.datetime.now()
@@ -65,7 +64,25 @@ def main():
     target_price = {}
     ma5 = {}
     buy_flag = {}
-    coins = ['BTC', 'ETH', 'XRP', 'ADA',  'LTC', 'BCH']
+    list = {}
+    coins = []
+#'BTC', 'ETH', 'XRP', 'ADA',  'LTC', 'BCH'(10.29일 부 폐기)
+#'MANA', 'SAND', 'BAT', 'ENJ', 'THETA', 'ICX', 'CRO'(11.15일 부 폐기)
+
+    for ticker in bithumb.get_tickers():
+        rate = calc_rate(ticker)
+        if rate>0:
+            list[ticker] = rate
+ 
+    new = dict(sorted(list.items(), key=lambda x:x[1], reverse=True))
+    coin = new.keys()
+    cnt=0
+    for tick in coin:
+        cnt+=1
+        coins.append(tick)
+        if cnt==10:
+            break
+    print("거래대상 코인 :", coins)
 
     while True:
         try:
@@ -82,12 +99,9 @@ def main():
                 # 코인 별 진입가격 계산
                 for tick in coins:
                     target_price[tick] = get_target_price(tick)            # 코인 별 진입 가격 계산
-                    
                     ma5[tick] = get_yesterday_ma5(tick)                    # 코인 별 이동 평균 계산
                     buy_flag[tick] = 0                                     # buy_flag에 초기값 0
-                                    
-                    balance = bithumb.get_balance(tick)
-            
+                                                
                 print(target_price)
                 print(ma5)
                 print("코인 매도 완료, 매수 실행")
@@ -98,7 +112,7 @@ def main():
             # 보완할 필요 있음, 변동성 돌파 전략 및 이동평균 자격 충족하는 화폐들 리스트 따로 만든 후
             # 그중에 우선순위 판단하여 거래할 수 있도록 보완 필
 
-            if count>=6:
+            if count>=len(coins):
                 print("금일 거래를 종료합니다.")
                 break
 
@@ -109,7 +123,7 @@ def main():
             for tick in coins:
                 current_price = pybithumb.get_current_price(tick)
                 if (current_price>target_price[tick]) and (current_price > ma5[tick]) and (buy_flag[tick] == 0):
-                    k=6-count
+                    k=len(coins)-count
                     buy_crypto_currency(tick, k)
                     result = bithumb.get_balance(tick)[0]
                     buy_flag[tick]=1
