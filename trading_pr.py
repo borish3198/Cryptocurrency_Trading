@@ -53,12 +53,6 @@ def main():
         change_rate = (yesterday_close-yesterday_open)/yesterday_open * 100
         return change_rate
 
-    #매일 자정 거래를 위한 시간값
-    now = datetime.datetime.now()
-    print("프로그램 시작 시간 :", now)
-
-    start = now + datetime.timedelta(seconds=10)
-    end = datetime.datetime(now.year, now.month, now.day, 23, 55, 00)
 
     count=0
     target_price = {}
@@ -83,6 +77,12 @@ def main():
         if cnt==10:
             break
     print("거래대상 코인 :", coins)
+
+    # 프로그램 시작 및 종료 시간
+    now = datetime.datetime.now()
+    print("프로그램 시작 시간 :", now)
+    start = now + datetime.timedelta(seconds=10)
+    end = datetime.datetime(now.year, now.month, now.day, 23, 55, 00)
 
     while True:
         try:
